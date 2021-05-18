@@ -45,7 +45,7 @@ async function detectPackageManager(location: PortablePath) {
   let yarnLock = null;
   try {
     yarnLock = await xfs.readFilePromise(ppath.join(location, Filename.lockfile), `utf8`);
-  } catch {}
+  } catch { }
 
   if (yarnLock !== null) {
     if (yarnLock.match(/^__metadata:$/m)) {
@@ -64,8 +64,8 @@ async function detectPackageManager(location: PortablePath) {
   return null;
 }
 
-export async function makeScriptEnv({project, binFolder, lifecycleScript}: {project?: Project, binFolder: PortablePath, lifecycleScript?: string}) {
-  const scriptEnv: {[key: string]: string} = {};
+export async function makeScriptEnv({project, binFolder, lifecycleScript}: { project?: Project, binFolder: PortablePath, lifecycleScript?: string }) {
+  const scriptEnv: { [key: string]: string } = {};
   for (const [key, value] of Object.entries(process.env))
     if (typeof value !== `undefined`)
       scriptEnv[key.toLowerCase() !== `path` ? key : `PATH`] = value;
@@ -117,18 +117,18 @@ export async function makeScriptEnv({project, binFolder, lifecycleScript}: {proj
     );
   }
 
-  return scriptEnv as (typeof scriptEnv) & {BERRY_BIN_FOLDER: string};
+  return scriptEnv as (typeof scriptEnv) & { BERRY_BIN_FOLDER: string };
 }
 
 /**
  * Given a folder, prepares this project for use. Runs `yarn install` then
- * `yarn build` if a `package.json` is found.
+ * `yarn pack` if a `package.json` is found.
  */
 
 const MAX_PREPARE_CONCURRENCY = 2;
 const prepareLimit = pLimit(MAX_PREPARE_CONCURRENCY);
 
-export async function prepareExternalProject(cwd: PortablePath, outputPath: PortablePath, {configuration, report, workspace = null}: {configuration: Configuration, report: Report, workspace?: string | null}) {
+export async function prepareExternalProject(cwd: PortablePath, outputPath: PortablePath, {configuration, report, workspace = null}: { configuration: Configuration, report: Report, workspace?: string | null }) {
   await prepareLimit(async () => {
     await xfs.mktempPromise(async logDir => {
       const logFile = ppath.join(logDir, `pack.log` as Filename);
@@ -169,7 +169,11 @@ export async function prepareExternalProject(cwd: PortablePath, outputPath: Port
             // Run an install; we can't avoid it unless we inspect the
             // package.json, which I don't want to do to keep the codebase
             // clean (even if it has a slight perf cost when cloning v1 repos)
-            const install = await execUtils.pipevp(`yarn`, [`install`], {cwd, env, stdin, stdout, stderr, end: execUtils.EndStrategy.ErrorCode});
+            // env.YARN_MUTEX = 'file:/tmp/yarn-mutex';
+            // const install = await execUtils.pipevp(`yarn`, [`install`], {cwd, env, stdin, stdout, stderr, end: execUtils.EndStrategy.ErrorCode});
+            // const install = await execUtils.pipevp(`yarn`, [`install`, `--cache-folder`, `./.yarn/cache`], {cwd, env, stdin, stdout, stderr, end: execUtils.EndStrategy.ErrorCode});
+            const install = await execUtils.pipevp(`yarn`, [`install`, `--mutex`, `network`], {cwd, env, stdin, stdout, stderr, end: execUtils.EndStrategy.ErrorCode});
+
             if (install.code !== 0)
               return install.code;
 
@@ -328,7 +332,7 @@ export async function executePackageShellcode(locator: Locator, command: string,
   });
 }
 
-async function initializePackageEnvironment(locator: Locator, {project, binFolder, cwd, lifecycleScript}: {project: Project, binFolder: PortablePath, cwd?: PortablePath | undefined, lifecycleScript?: string}) {
+async function initializePackageEnvironment(locator: Locator, {project, binFolder, cwd, lifecycleScript}: { project: Project, binFolder: PortablePath, cwd?: PortablePath | undefined, lifecycleScript?: string }) {
   const pkg = project.storedPackages.get(locator.locatorHash);
   if (!pkg)
     throw new Error(`Package for ${structUtils.prettyLocator(project.configuration, locator)} not found in the project`);
